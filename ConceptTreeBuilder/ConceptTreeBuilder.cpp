@@ -18,17 +18,29 @@ public:
 		memset(type,0,sizeof(type));
 		father=NULL;
 	}
+	void Clear()
+	{
+		memset(id,0,sizeof(id));
+		memset(name,0,sizeof(name));
+		memset(type,0,sizeof(type));
+		father=NULL;
+	}
 };
 
 vector <Concept*> List;
 
-int main()
+void getSubClassOf()
 {
 	FILE *SubClassIn;
 	SubClassIn=fopen("rdfsSubClassOf.tsv","r");
+	FILE *Out;
+	Out=fopen("SubClassOf.txt","w");
 	char temp[500],result[500];
 	bool validflag,idflag,wordnet;
 	int length;
+	Concept *c=NULL,*f=NULL;
+	c=new Concept();
+	f=new Concept();
 	while(EOF)
 	{
 		validflag=1;
@@ -48,9 +60,8 @@ int main()
 			}
 		if(validflag==0)
 			continue;
-		Concept *c=NULL,*f=NULL;
-		c=new Concept();
-		f=new Concept();
+		c->Clear();
+		f->Clear();
 		int i=0,j=0;
 		if(temp[0]=='\t')
 		{
@@ -155,14 +166,147 @@ int main()
 		List.push_back(c);
 		List.push_back(f);
 		length+=6;
-		printf("%d\n",length);
+		//printf("%d\n",length);
 		sprintf(result,"@%s@%s@%s@%s@%s@%s\n",c->id,c->name,c->type,f->id,f->name,f->type);
-		printf("%s",result);
-		//delete f;
-		delete c;
+		fprintf(Out,"%s",result);
 		//printf("%s\n\n",temp);
 		//system("pause");
 	}
-	system("pause");
+	fclose(Out);
+	//system("pause");
+}
+
+void getTypes()
+{
+	FILE *TypeIn;
+	TypeIn=fopen("rdfTypes.tsv","r");
+	FILE *Out;
+	Out=fopen("Types.txt","w");
+	char temp[1000],result[1000];
+	int length,colon;
+	bool wordnet,yago,valid;
+	Concept *c=NULL,*f=NULL;
+	c=new Concept();
+	f=new Concept();
+	while(EOF)
+	{
+		length=0;
+		wordnet=0;
+		yago=0;
+		colon=0;
+		valid=0;
+		if(fgets(temp,1000,TypeIn)==NULL)
+			break;
+		if(strcmp(temp,"")==0)
+			break;
+		for(int i=0;i<(int)strlen(temp)-4;i++)
+			if(temp[i]=='y'&&temp[i+1]=='a'&&temp[i+2]=='g'&&temp[i+3]=='o')
+			{
+				yago=1;
+				break;
+			}
+		for(int i=0;i<(int)strlen(temp);i++)
+			if(temp[i]==':')
+				colon++;
+		if(yago==1||colon>1)
+			continue;
+		c->Clear();
+		f->Clear();
+		int i=0,j=0;
+		while(temp[i]!='_')
+			i++;
+		i++;
+		while(temp[i]!='>')
+			i++;
+		i+=3;
+		j=0;
+		while(temp[i]!='>'||temp[i+1]>'9')
+		{
+			if(temp[i]=='&')
+				break;
+			c->name[j]=temp[i];
+			length++;
+			i++;
+			j++;
+		}
+		strcpy(c->type,"root");
+		length+=4;
+		i++;
+		j=0;
+		while(temp[i]!='<')
+			i++;
+		j=0;
+		i++;
+		for(int k=i;k<=(int)strlen(temp);k++)
+			if(temp[k]=='_')
+			{
+				valid=1;
+				break;
+			}
+		if(valid==0)
+			continue;
+		if(temp[i+1]=='o')
+			wordnet=1;
+		while(temp[i]!='_')
+		{
+			f->type[j]=temp[i];
+			length++;
+			i++;
+			j++;
+		}
+		i++;
+		j=0;
+		if(wordnet==1)
+		{
+			while(temp[i]!='_'||temp[i+1]>'9')
+			{
+				if(temp[i]=='&')
+					break;
+				f->name[j]=temp[i];
+				length++;
+				i++;
+				j++;
+			}
+			i++;
+			j=0;
+			while(temp[i]!='>'&&temp[i]>='0'&&temp[i]<='9')
+			{
+				f->id[j]=temp[i];
+				length++;
+				i++;
+				j++;
+			}
+		}
+		else
+		{
+			while(temp[i]!='>'&&temp[i]!='<')
+			{
+				if(temp[i]=='&')
+					break;
+				f->name[j]=temp[i];
+				length++;
+				i++;
+				j++;
+			}
+		}
+		c->father=f;
+		List.push_back(c);
+		List.push_back(f);
+		length+=6;
+		//printf("%d\n",length);
+		sprintf(result,"@%s@%s@%s@%s@%s@%s\n",c->id,c->name,c->type,f->id,f->name,f->type);
+		//printf("%s",result);
+		//printf("%s\n\n",temp);
+		fprintf(Out,"%s",result);
+		//system("pause");
+	}
+	fclose(Out);
+	//system("pause");
+}
+
+int main()
+{
+	getSubClassOf();
+	getTypes();
 	return 0;
 }
